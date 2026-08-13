@@ -3,7 +3,7 @@
   "name": "Recent Tabs",
   "version": "1.0.0",
   "description": "Cycle back through the last 5 tabs used in each Chrome window.",
-  "permissions": ["tabs"],
+  "permissions": ["tabs", "storage"],
   "background": {
     "service_worker": "background.js"
   },

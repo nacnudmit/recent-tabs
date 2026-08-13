@@ -7,6 +7,20 @@ const recentByWindow = new Map();
 const cycleOffsetByWindow = new Map();
 let cyclingInProgress = false;
 
+function persistRecentByWindow() {
+  chrome.storage.session.set({ recentByWindow: Object.fromEntries(recentByWindow) });
+}
+
+async function hydrateFromStorage() {
+  const stored = await chrome.storage.session.get("recentByWindow");
+  if (stored.recentByWindow) {
+    for (const [windowId, list] of Object.entries(stored.recentByWindow)) {
+      recentByWindow.set(Number(windowId), list);
+    }
+  }
+}
+hydrateFromStorage();
+
 function recordActivation(windowId, tabId) {
   let list = recentByWindow.get(windowId);
   if (!list) {
@@ -21,6 +35,7 @@ function recordActivation(windowId, tabId) {
   if (list.length > MAX_RECENT) {
     list.length = MAX_RECENT;
   }
+  persistRecentByWindow();
 }
 
 function removeTab(tabId) {
@@ -30,11 +45,13 @@ function removeTab(tabId) {
       list.splice(index, 1);
     }
   }
+  persistRecentByWindow();
 }
 
 function removeWindow(windowId) {
   recentByWindow.delete(windowId);
   cycleOffsetByWindow.delete(windowId);
+  persistRecentByWindow();
 }
 
 chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
