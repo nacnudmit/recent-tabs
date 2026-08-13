@@ -7,6 +7,67 @@ const recentByWindow = new Map();
 const cycleOffsetByWindow = new Map();
 let cyclingInProgress = false;
 
+// windowId -> { pendingTabId, port, timeoutId, resolved }
+const cycleSessionByWindow = new Map();
+const CYCLE_TIMEOUT_MS = 1500;
+
+function restartCycleTimer(windowId) {
+  const session = cycleSessionByWindow.get(windowId);
+  if (!session) {
+    return;
+  }
+  if (session.timeoutId) {
+    clearTimeout(session.timeoutId);
+  }
+  session.timeoutId = setTimeout(() => commitCycleSession(windowId), CYCLE_TIMEOUT_MS);
+}
+
+async function commitCycleSession(windowId) {
+  const session = cycleSessionByWindow.get(windowId);
+  if (!session || session.resolved) {
+    return;
+  }
+  session.resolved = true;
+  if (session.timeoutId) {
+    clearTimeout(session.timeoutId);
+  }
+  cyclingInProgress = true;
+  try {
+    await chrome.tabs.update(session.pendingTabId, { active: true });
+  } catch {
+    // tab may no longer exist; nothing to activate
+  } finally {
+    cyclingInProgress = false;
+  }
+  if (session.port) {
+    try {
+      session.port.postMessage({ type: "close" });
+    } catch {
+      // port may already be disconnected
+    }
+  }
+  cycleSessionByWindow.delete(windowId);
+}
+
+async function findNextCandidate(windowId) {
+  const list = recentByWindow.get(windowId) || [];
+  if (list.length === 0) {
+    return null;
+  }
+  const currentOffset = cycleOffsetByWindow.get(windowId) || 0;
+  for (let step = 1; step <= list.length; step++) {
+    const candidateOffset = (currentOffset + step) % list.length;
+    const candidateTabId = list[candidateOffset];
+    try {
+      await chrome.tabs.get(candidateTabId);
+    } catch {
+      continue;
+    }
+    return { candidateOffset, candidateTabId };
+  }
+  return null;
+}
+
 function persistRecentByWindow() {
   chrome.storage.session.set({ recentByWindow: Object.fromEntries(recentByWindow) });
 }
@@ -79,33 +140,102 @@ chrome.commands.onCommand.addListener(async (command) => {
   if (!focusedWindow) {
     return;
   }
-
   const windowId = focusedWindow.id;
-  const list = recentByWindow.get(windowId) || [];
-  if (list.length === 0) {
+
+  const candidate = await findNextCandidate(windowId);
+  if (!candidate) {
+    return;
+  }
+  cycleOffsetByWindow.set(windowId, candidate.candidateOffset);
+
+  const existingSession = cycleSessionByWindow.get(windowId);
+  if (existingSession) {
+    existingSession.pendingTabId = candidate.candidateTabId;
+    existingSession.resolved = false;
+    restartCycleTimer(windowId);
+    if (existingSession.port) {
+      existingSession.port.postMessage({ type: "highlight", tabId: candidate.candidateTabId });
+    }
     return;
   }
 
-  const currentOffset = cycleOffsetByWindow.get(windowId) || 0;
+  let popupOpened = true;
+  try {
+    await chrome.action.openPopup();
+  } catch {
+    popupOpened = false;
+  }
 
-  for (let step = 1; step <= list.length; step++) {
-    const candidateOffset = (currentOffset + step) % list.length;
-    const candidateTabId = list[candidateOffset];
-    try {
-      await chrome.tabs.get(candidateTabId);
-    } catch {
-      continue;
-    }
-
+  if (!popupOpened) {
     cyclingInProgress = true;
-    cycleOffsetByWindow.set(windowId, candidateOffset);
     try {
-      await chrome.tabs.update(candidateTabId, { active: true });
+      await chrome.tabs.update(candidate.candidateTabId, { active: true });
     } finally {
       cyclingInProgress = false;
     }
     return;
   }
+
+  cycleSessionByWindow.set(windowId, {
+    pendingTabId: candidate.candidateTabId,
+    port: null,
+    timeoutId: null,
+    resolved: false,
+  });
+  restartCycleTimer(windowId);
+});
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== "cycle-popup") {
+    return;
+  }
+
+  let attachedWindowId = null;
+
+  port.onMessage.addListener((message) => {
+    if (message?.windowId !== undefined && attachedWindowId === null) {
+      attachedWindowId = message.windowId;
+      const session = cycleSessionByWindow.get(attachedWindowId);
+      if (session) {
+        session.port = port;
+      }
+      return;
+    }
+
+    if (attachedWindowId === null) {
+      return;
+    }
+    const session = cycleSessionByWindow.get(attachedWindowId);
+    if (!session) {
+      return;
+    }
+
+    if (message?.type === "select") {
+      session.resolved = true;
+      if (session.timeoutId) {
+        clearTimeout(session.timeoutId);
+      }
+      cyclingInProgress = true;
+      chrome.tabs.update(message.tabId, { active: true }).finally(() => {
+        cyclingInProgress = false;
+      });
+      cycleSessionByWindow.delete(attachedWindowId);
+    } else if (message?.type === "pause") {
+      if (session.timeoutId) {
+        clearTimeout(session.timeoutId);
+        session.timeoutId = null;
+      }
+    } else if (message?.type === "resume") {
+      restartCycleTimer(attachedWindowId);
+    }
+  });
+
+  port.onDisconnect.addListener(() => {
+    if (attachedWindowId === null) {
+      return;
+    }
+    commitCycleSession(attachedWindowId);
+  });
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -131,7 +261,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     }
 
-    sendResponse({ tabs });
+    const session = windowId !== undefined ? cycleSessionByWindow.get(windowId) : undefined;
+    const cycling = {
+      active: Boolean(session),
+      highlightedTabId: session ? session.pendingTabId : null,
+    };
+
+    sendResponse({ tabs, cycling });
   })();
 
   return true; // keep the message channel open for the async sendResponse
