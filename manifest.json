@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Recent Tabs",
+  "version": "1.0.0",
+  "description": "Cycle back through the last 5 tabs used in each Chrome window.",
+  "permissions": ["tabs"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "commands": {
+    "cycle-recent-tabs": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "Cycle back through recently used tabs in this window"
+    }
+  }
+}
