@@ -91,4 +91,33 @@ chrome.commands.onCommand.addListener(async (command) => {
   }
 });
 
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== "get-recent-tabs") {
+    return false;
+  }
+
+  (async () => {
+    const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: false, lastFocusedWindow: true });
+    const windowId = currentTab ? currentTab.windowId : undefined;
+    const list = windowId !== undefined ? (recentByWindow.get(windowId) || []) : [];
+
+    const tabs = [];
+    for (const tabId of list) {
+      if (currentTab && tabId === currentTab.id) {
+        continue;
+      }
+      try {
+        const tab = await chrome.tabs.get(tabId);
+        tabs.push({ id: tab.id, title: tab.title || "(untitled)", favIconUrl: tab.favIconUrl });
+      } catch {
+        // tab no longer exists; skip it
+      }
+    }
+
+    sendResponse({ tabs });
+  })();
+
+  return true; // keep the message channel open for the async sendResponse
+});
+
 console.log("Recent Tabs: service worker loaded");

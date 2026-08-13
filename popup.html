@@ -4,11 +4,18 @@
   <meta charset="utf-8">
   <title>Recent Tabs</title>
   <style>
-    body { font-family: system-ui, sans-serif; width: 260px; margin: 0; padding: 8px; }
+    body { font-family: system-ui, sans-serif; width: 280px; margin: 0; padding: 8px; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { display: flex; align-items: center; gap: 8px; padding: 6px 4px; cursor: pointer; border-radius: 4px; }
+    li:hover { background: #eee; }
+    img { width: 16px; height: 16px; flex-shrink: 0; }
+    span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #empty { color: #666; padding: 6px 4px; }
   </style>
 </head>
 <body>
-  <div id="list">Loading…</div>
+  <ul id="list"></ul>
+  <div id="empty" style="display: none;">No recent tabs yet</div>
   <script src="popup.js"></script>
 </body>
 </html>
