@@ -3,6 +3,10 @@ const MAX_RECENT = 5;
 // windowId -> array of tabIds, index 0 = most recently used
 const recentByWindow = new Map();
 
+// windowId -> current offset into recentByWindow's list while cycling
+const cycleOffsetByWindow = new Map();
+let cyclingInProgress = false;
+
 function recordActivation(windowId, tabId) {
   let list = recentByWindow.get(windowId);
   if (!list) {
@@ -30,10 +34,14 @@ function removeTab(tabId) {
 
 function removeWindow(windowId) {
   recentByWindow.delete(windowId);
+  cycleOffsetByWindow.delete(windowId);
 }
 
 chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
   recordActivation(windowId, tabId);
+  if (!cyclingInProgress) {
+    cycleOffsetByWindow.set(windowId, 0);
+  }
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
@@ -42,6 +50,45 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 
 chrome.windows.onRemoved.addListener((windowId) => {
   removeWindow(windowId);
+});
+
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== "cycle-recent-tabs") {
+    return;
+  }
+
+  const [focusedWindow] = await chrome.windows.getAll({ populate: false, windowTypes: ["normal"] })
+    .then((windows) => windows.filter((w) => w.focused));
+  if (!focusedWindow) {
+    return;
+  }
+
+  const windowId = focusedWindow.id;
+  const list = recentByWindow.get(windowId) || [];
+  if (list.length === 0) {
+    return;
+  }
+
+  const currentOffset = cycleOffsetByWindow.get(windowId) || 0;
+
+  for (let step = 1; step <= list.length; step++) {
+    const candidateOffset = (currentOffset + step) % list.length;
+    const candidateTabId = list[candidateOffset];
+    try {
+      await chrome.tabs.get(candidateTabId);
+    } catch {
+      continue;
+    }
+
+    cyclingInProgress = true;
+    cycleOffsetByWindow.set(windowId, candidateOffset);
+    try {
+      await chrome.tabs.update(candidateTabId, { active: true });
+    } finally {
+      cyclingInProgress = false;
+    }
+    return;
+  }
 });
 
 console.log("Recent Tabs: service worker loaded");
