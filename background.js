@@ -1,4 +1,4 @@
-const MAX_RECENT = 5;
+let maxRecent = 5;
 
 // windowId -> array of tabIds, index 0 = most recently used
 const recentByWindow = new Map();
@@ -73,14 +73,26 @@ function persistRecentByWindow() {
 }
 
 async function hydrateFromStorage() {
-  const stored = await chrome.storage.session.get("recentByWindow");
-  if (stored.recentByWindow) {
-    for (const [windowId, list] of Object.entries(stored.recentByWindow)) {
+  const [sessionStored, syncStored] = await Promise.all([
+    chrome.storage.session.get("recentByWindow"),
+    chrome.storage.sync.get("maxRecent"),
+  ]);
+  if (sessionStored.recentByWindow) {
+    for (const [windowId, list] of Object.entries(sessionStored.recentByWindow)) {
       recentByWindow.set(Number(windowId), list);
     }
   }
+  if (syncStored.maxRecent) {
+    maxRecent = syncStored.maxRecent;
+  }
 }
 const hydrationPromise = hydrateFromStorage();
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "sync" && changes.maxRecent) {
+    maxRecent = changes.maxRecent.newValue;
+  }
+});
 
 function recordActivation(windowId, tabId) {
   let list = recentByWindow.get(windowId);
@@ -93,8 +105,8 @@ function recordActivation(windowId, tabId) {
     list.splice(existingIndex, 1);
   }
   list.unshift(tabId);
-  if (list.length > MAX_RECENT) {
-    list.length = MAX_RECENT;
+  if (list.length > maxRecent) {
+    list.length = maxRecent;
   }
   persistRecentByWindow();
 }
