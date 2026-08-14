@@ -108,4 +108,12 @@ async function loadRecentTabs() {
   }
 }
 
+function wireUpSettingsLink() {
+  document.getElementById("settings-link").addEventListener("click", () => {
+    chrome.runtime.openOptionsPage();
+    window.close();
+  });
+}
+
+wireUpSettingsLink();
 loadRecentTabs();
