@@ -1,14 +1,24 @@
 {
   "manifest_version": 3,
   "name": "Recent Tabs",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Cycle back through recently used tabs in each Chrome window.",
   "permissions": ["tabs", "storage"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "options_page": "options.html",
   "commands": {
