@@ -14,7 +14,7 @@ Recent Tabs remembers the tabs you've used most recently in each Chrome window a
 - Open the toolbar popup any time to see and jump to your recent tabs for the current window.
 - Choose how many tabs to remember (5, 10, 15, or 20) from the extension's settings page.
 
-Everything stays local to your browser — no accounts, no tracking, no data ever leaves your device except via Chrome's own built-in sync for your chosen settings.
+Everything stays local to your browser — no accounts, no tracking, no data collected or transmitted by the extension itself, aside from Chrome's own built-in sync for your chosen settings.
 
 ## Single purpose
 

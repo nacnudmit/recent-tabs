@@ -12,6 +12,7 @@ zip -r recent-tabs.zip \
   popup.js \
   options.html \
   options.js \
-  icons
+  icons \
+  -x '*.DS_Store'
 
 echo "Built recent-tabs.zip"
