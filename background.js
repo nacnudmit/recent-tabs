@@ -80,7 +80,7 @@ async function hydrateFromStorage() {
     }
   }
 }
-hydrateFromStorage();
+const hydrationPromise = hydrateFromStorage();
 
 function recordActivation(windowId, tabId) {
   let list = recentByWindow.get(windowId);
@@ -115,22 +115,26 @@ function removeWindow(windowId) {
   persistRecentByWindow();
 }
 
-chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
+chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
+  await hydrationPromise;
   recordActivation(windowId, tabId);
   if (!cyclingInProgress) {
     cycleOffsetByWindow.set(windowId, 0);
   }
 });
 
-chrome.tabs.onRemoved.addListener((tabId) => {
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  await hydrationPromise;
   removeTab(tabId);
 });
 
-chrome.windows.onRemoved.addListener((windowId) => {
+chrome.windows.onRemoved.addListener(async (windowId) => {
+  await hydrationPromise;
   removeWindow(windowId);
 });
 
 chrome.commands.onCommand.addListener(async (command) => {
+  await hydrationPromise;
   if (command !== "cycle-recent-tabs") {
     return;
   }
@@ -244,32 +248,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   (async () => {
-    const windowId = message.windowId;
-    const [currentTab] = windowId !== undefined
-      ? await chrome.tabs.query({ active: true, windowId })
-      : [];
-    const list = windowId !== undefined ? (recentByWindow.get(windowId) || []) : [];
+    try {
+      await hydrationPromise;
+      const windowId = message.windowId;
+      const [currentTab] = windowId !== undefined
+        ? await chrome.tabs.query({ active: true, windowId })
+        : [];
+      const list = windowId !== undefined ? (recentByWindow.get(windowId) || []) : [];
 
-    const tabs = [];
-    for (const tabId of list) {
-      if (currentTab && tabId === currentTab.id) {
-        continue;
+      const tabs = [];
+      for (const tabId of list) {
+        if (currentTab && tabId === currentTab.id) {
+          continue;
+        }
+        try {
+          const tab = await chrome.tabs.get(tabId);
+          tabs.push({ id: tab.id, title: tab.title || "(untitled)", favIconUrl: tab.favIconUrl });
+        } catch {
+          // tab no longer exists; skip it
+        }
       }
-      try {
-        const tab = await chrome.tabs.get(tabId);
-        tabs.push({ id: tab.id, title: tab.title || "(untitled)", favIconUrl: tab.favIconUrl });
-      } catch {
-        // tab no longer exists; skip it
-      }
+
+      const session = windowId !== undefined ? cycleSessionByWindow.get(windowId) : undefined;
+      const cycling = {
+        active: Boolean(session),
+        highlightedTabId: session ? session.pendingTabId : null,
+      };
+
+      sendResponse({ tabs, cycling });
+    } catch {
+      sendResponse({ tabs: [], cycling: { active: false, highlightedTabId: null } });
     }
-
-    const session = windowId !== undefined ? cycleSessionByWindow.get(windowId) : undefined;
-    const cycling = {
-      active: Boolean(session),
-      highlightedTabId: session ? session.pendingTabId : null,
-    };
-
-    sendResponse({ tabs, cycling });
   })();
 
   return true; // keep the message channel open for the async sendResponse

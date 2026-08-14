@@ -33,10 +33,9 @@ function restartLocalTimer() {
   }, CYCLE_TIMEOUT_MS);
 }
 
-async function startCyclingSession() {
-  const currentWindow = await chrome.windows.getCurrent();
+function startCyclingSession(windowId) {
   cyclingPort = chrome.runtime.connect({ name: "cycle-popup" });
-  cyclingPort.postMessage({ windowId: currentWindow.id });
+  cyclingPort.postMessage({ windowId });
 
   cyclingPort.onMessage.addListener((message) => {
     if (message?.type === "highlight") {
@@ -105,7 +104,7 @@ async function loadRecentTabs() {
 
   if (cycling.active) {
     setHighlight(cycling.highlightedTabId);
-    startCyclingSession();
+    startCyclingSession(currentWindow.id);
   }
 }
 
