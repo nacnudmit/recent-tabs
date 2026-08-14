@@ -244,8 +244,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   (async () => {
-    const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: false, lastFocusedWindow: true });
-    const windowId = currentTab ? currentTab.windowId : undefined;
+    const windowId = message.windowId;
+    const [currentTab] = windowId !== undefined
+      ? await chrome.tabs.query({ active: true, windowId })
+      : [];
     const list = windowId !== undefined ? (recentByWindow.get(windowId) || []) : [];
 
     const tabs = [];

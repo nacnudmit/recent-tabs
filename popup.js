@@ -61,7 +61,8 @@ async function startCyclingSession() {
 }
 
 async function loadRecentTabs() {
-  const response = await chrome.runtime.sendMessage({ type: "get-recent-tabs" });
+  const currentWindow = await chrome.windows.getCurrent();
+  const response = await chrome.runtime.sendMessage({ type: "get-recent-tabs", windowId: currentWindow.id });
   const tabs = response?.tabs || [];
   const cycling = response?.cycling || { active: false, highlightedTabId: null };
 
