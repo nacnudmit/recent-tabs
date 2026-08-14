@@ -109,8 +109,8 @@ async function loadRecentTabs() {
 }
 
 function wireUpSettingsLink() {
-  document.getElementById("settings-link").addEventListener("click", () => {
-    chrome.runtime.openOptionsPage();
+  document.getElementById("settings-link").addEventListener("click", async () => {
+    await chrome.runtime.openOptionsPage();
     window.close();
   });
 }
