@@ -31,7 +31,14 @@ elif flavor == "firefox":
     manifest["options_ui"] = {"page": "options.html"}
     manifest.setdefault(
         "browser_specific_settings",
-        {"gecko": {"id": "recent-tabs@nacnudmit", "strict_min_version": "121.0"}},
+        {
+            "gecko": {
+                "id": "recent-tabs@nacnudmit",
+                "strict_min_version": "140.0",
+                "data_collection_permissions": {"required": ["none"]},
+            },
+            "gecko_android": {"strict_min_version": "142.0"},
+        },
     )
 else:
     raise SystemExit(f"unknown flavor: {flavor}")

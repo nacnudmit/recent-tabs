@@ -18,7 +18,7 @@ The same source tree loads in **Chrome** and **Firefox**. Store packages differ 
 1. Open `about:debugging#/runtime/this-firefox`.
 2. Click **Load Temporary Add-on…**.
 3. Select this repository's `manifest.json` (or any file in the folder).
-4. Firefox MV3 does not run `background.service_worker`. It uses `background.scripts` from the same source manifest (Firefox 121+). The add-on id is `recent-tabs@nacnudmit`.
+4. Firefox ignores `background.service_worker` and starts `background.scripts` from the same source manifest. The add-on id is `recent-tabs@nacnudmit`. Store builds require Firefox 140+ (`strict_min_version`) for AMO's data-collection consent field.
 
 Temporary add-ons are removed when Firefox restarts. For a signed install, submit the Firefox zip to [addons.mozilla.org](https://addons.mozilla.org/).
 
@@ -38,7 +38,7 @@ Both zips contain the same extension files (`background.js`, popup, options, ico
 | --- | --- | --- |
 | Background | `service_worker` only | `scripts` only |
 | Options | `options_page` | `options_ui.page` |
-| Firefox id | omitted | `browser_specific_settings.gecko` |
+| Firefox / AMO keys | omitted | gecko id `recent-tabs@nacnudmit`, min Firefox 140 / Android 142, `data_collection_permissions: none` |
 
 The source `manifest.json` keeps **both** background keys plus both options keys so the folder itself can be loaded in either browser without a build step.
 
