@@ -11,22 +11,22 @@
 </head>
 <body>
   <h1>Recent Tabs — Privacy Policy</h1>
-  <p>Recent Tabs does not collect, transmit, sell, or share any user data with any third party or server. There is no backend and no analytics. The extension itself makes no network requests; the only network activity involved is the browser's own loading of each tab's favicon image for display in the popup, which Chrome handles the same way it does for any other tab.</p>
+  <p>Recent Tabs does not collect, transmit, sell, or share any user data with any third party or server. There is no backend and no analytics. The extension itself makes no network requests; the only network activity involved is the browser's own loading of each tab's favicon image for display in the popup, which the browser handles the same way it does for any other tab.</p>
 
   <h2>What the extension reads</h2>
-  <p>Recent Tabs uses Chrome's <code>tabs</code> permission to read tab titles, favicon URLs, and tab/window IDs. This information is used solely to build and display the recently-used-tabs list within the extension's own popup, and to switch between tabs. This data never leaves your browser.</p>
+  <p>Recent Tabs uses the browser's <code>tabs</code> permission to read tab titles, favicon URLs, and tab/window IDs. This information is used solely to build and display the recently-used-tabs list within the extension's own popup, and to switch between tabs. This data never leaves your browser.</p>
 
   <h2>What the extension stores</h2>
-  <p>The extension stores two things, both using Chrome's built-in <code>storage</code> APIs, both entirely local to your own browser/account:</p>
+  <p>The extension stores two things, both using the browser's built-in <code>storage</code> APIs, both entirely local to your own browser/account:</p>
   <ul>
-    <li><strong>Per-window recent-tabs lists</strong> — stored in <code>chrome.storage.session</code>, cleared automatically when Chrome fully restarts.</li>
-    <li><strong>Your chosen "tabs remembered" setting</strong> — stored in <code>chrome.storage.sync</code>, which Chrome syncs across your own signed-in devices using your Google account's built-in sync. This data is not accessible to the developer of this extension or to anyone else.</li>
+    <li><strong>Per-window recent-tabs lists</strong> — stored in <code>storage.session</code>, cleared automatically when the browser fully restarts.</li>
+    <li><strong>Your chosen "tabs remembered" setting</strong> — stored in <code>storage.sync</code>, which the browser syncs across your own signed-in devices using its built-in account sync. This data is not accessible to the developer of this extension or to anyone else.</li>
   </ul>
 
   <h2>Accounts and personal information</h2>
   <p>Recent Tabs does not require or collect any account, sign-in, or personal information.</p>
 
   <h2>Contact</h2>
-  <p>Questions about this policy can be directed to the extension's listed support contact on the Chrome Web Store.</p>
+  <p>Questions about this policy can be directed to the extension's listed support contact on the store listing, or via the <a href="https://github.com/nacnudmit/recent-tabs/issues">GitHub repository</a>.</p>
 </body>
 </html>

@@ -1,3 +1,6 @@
+// Promise-based WebExtensions API: `browser` on Firefox, `chrome` on Chrome MV3.
+const api = globalThis.browser ?? globalThis.chrome;
+
 const CYCLE_TIMEOUT_MS = 1500;
 
 let localTimeoutId = null;
@@ -24,7 +27,7 @@ function restartLocalTimer() {
   localTimeoutId = setTimeout(async () => {
     if (currentHighlightedTabId !== null) {
       try {
-        await chrome.tabs.update(currentHighlightedTabId, { active: true });
+        await api.tabs.update(currentHighlightedTabId, { active: true });
       } catch {
         // tab may no longer exist
       }
@@ -34,7 +37,7 @@ function restartLocalTimer() {
 }
 
 function startCyclingSession(windowId) {
-  cyclingPort = chrome.runtime.connect({ name: "cycle-popup" });
+  cyclingPort = api.runtime.connect({ name: "cycle-popup" });
   cyclingPort.postMessage({ windowId });
 
   cyclingPort.onMessage.addListener((message) => {
@@ -60,8 +63,8 @@ function startCyclingSession(windowId) {
 }
 
 async function loadRecentTabs() {
-  const currentWindow = await chrome.windows.getCurrent();
-  const response = await chrome.runtime.sendMessage({ type: "get-recent-tabs", windowId: currentWindow.id });
+  const currentWindow = await api.windows.getCurrent();
+  const response = await api.runtime.sendMessage({ type: "get-recent-tabs", windowId: currentWindow.id });
   const tabs = response?.tabs || [];
   const cycling = response?.cycling || { active: false, highlightedTabId: null };
 
@@ -93,7 +96,7 @@ async function loadRecentTabs() {
         clearLocalTimer();
         cyclingPort.postMessage({ type: "select", tabId: tab.id });
       } else {
-        await chrome.tabs.update(tab.id, { active: true });
+        await api.tabs.update(tab.id, { active: true });
       }
       window.close();
     });
@@ -110,7 +113,7 @@ async function loadRecentTabs() {
 
 function wireUpSettingsLink() {
   document.getElementById("settings-link").addEventListener("click", async () => {
-    await chrome.runtime.openOptionsPage();
+    await api.runtime.openOptionsPage();
     window.close();
   });
 }

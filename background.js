@@ -1,3 +1,6 @@
+// Promise-based WebExtensions API: `browser` on Firefox, `chrome` on Chrome MV3.
+const api = globalThis.browser ?? globalThis.chrome;
+
 let maxRecent = 5;
 
 // windowId -> array of tabIds, index 0 = most recently used
@@ -33,7 +36,7 @@ async function commitCycleSession(windowId) {
   }
   cyclingInProgress = true;
   try {
-    await chrome.tabs.update(session.pendingTabId, { active: true });
+    await api.tabs.update(session.pendingTabId, { active: true });
   } catch {
     // tab may no longer exist; nothing to activate
   } finally {
@@ -59,7 +62,7 @@ async function findNextCandidate(windowId) {
     const candidateOffset = (currentOffset + step) % list.length;
     const candidateTabId = list[candidateOffset];
     try {
-      await chrome.tabs.get(candidateTabId);
+      await api.tabs.get(candidateTabId);
     } catch {
       continue;
     }
@@ -69,13 +72,13 @@ async function findNextCandidate(windowId) {
 }
 
 function persistRecentByWindow() {
-  chrome.storage.session.set({ recentByWindow: Object.fromEntries(recentByWindow) });
+  api.storage.session.set({ recentByWindow: Object.fromEntries(recentByWindow) });
 }
 
 async function hydrateFromStorage() {
   const [sessionStored, syncStored] = await Promise.all([
-    chrome.storage.session.get("recentByWindow"),
-    chrome.storage.sync.get("maxRecent"),
+    api.storage.session.get("recentByWindow"),
+    api.storage.sync.get("maxRecent"),
   ]);
   if (sessionStored.recentByWindow) {
     for (const [windowId, list] of Object.entries(sessionStored.recentByWindow)) {
@@ -88,7 +91,7 @@ async function hydrateFromStorage() {
 }
 const hydrationPromise = hydrateFromStorage();
 
-chrome.storage.onChanged.addListener((changes, areaName) => {
+api.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === "sync" && changes.maxRecent) {
     maxRecent = changes.maxRecent.newValue;
   }
@@ -127,7 +130,7 @@ function removeWindow(windowId) {
   persistRecentByWindow();
 }
 
-chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
+api.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
   await hydrationPromise;
   recordActivation(windowId, tabId);
   if (!cyclingInProgress) {
@@ -135,23 +138,23 @@ chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
   }
 });
 
-chrome.tabs.onRemoved.addListener(async (tabId) => {
+api.tabs.onRemoved.addListener(async (tabId) => {
   await hydrationPromise;
   removeTab(tabId);
 });
 
-chrome.windows.onRemoved.addListener(async (windowId) => {
+api.windows.onRemoved.addListener(async (windowId) => {
   await hydrationPromise;
   removeWindow(windowId);
 });
 
-chrome.commands.onCommand.addListener(async (command) => {
+api.commands.onCommand.addListener(async (command) => {
   await hydrationPromise;
   if (command !== "cycle-recent-tabs") {
     return;
   }
 
-  const [focusedWindow] = await chrome.windows.getAll({ populate: false, windowTypes: ["normal"] })
+  const [focusedWindow] = await api.windows.getAll({ populate: false, windowTypes: ["normal"] })
     .then((windows) => windows.filter((w) => w.focused));
   if (!focusedWindow) {
     return;
@@ -177,7 +180,7 @@ chrome.commands.onCommand.addListener(async (command) => {
 
   let popupOpened = true;
   try {
-    await chrome.action.openPopup();
+    await api.action.openPopup();
   } catch {
     popupOpened = false;
   }
@@ -185,7 +188,7 @@ chrome.commands.onCommand.addListener(async (command) => {
   if (!popupOpened) {
     cyclingInProgress = true;
     try {
-      await chrome.tabs.update(candidate.candidateTabId, { active: true });
+      await api.tabs.update(candidate.candidateTabId, { active: true });
     } finally {
       cyclingInProgress = false;
     }
@@ -201,7 +204,7 @@ chrome.commands.onCommand.addListener(async (command) => {
   restartCycleTimer(windowId);
 });
 
-chrome.runtime.onConnect.addListener((port) => {
+api.runtime.onConnect.addListener((port) => {
   if (port.name !== "cycle-popup") {
     return;
   }
@@ -232,7 +235,7 @@ chrome.runtime.onConnect.addListener((port) => {
         clearTimeout(session.timeoutId);
       }
       cyclingInProgress = true;
-      chrome.tabs.update(message.tabId, { active: true }).finally(() => {
+      api.tabs.update(message.tabId, { active: true }).finally(() => {
         cyclingInProgress = false;
       });
       cycleSessionByWindow.delete(attachedWindowId);
@@ -254,7 +257,7 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+api.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type !== "get-recent-tabs") {
     return false;
   }
@@ -264,7 +267,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await hydrationPromise;
       const windowId = message.windowId;
       const [currentTab] = windowId !== undefined
-        ? await chrome.tabs.query({ active: true, windowId })
+        ? await api.tabs.query({ active: true, windowId })
         : [];
       const list = windowId !== undefined ? (recentByWindow.get(windowId) || []) : [];
 
@@ -274,7 +277,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           continue;
         }
         try {
-          const tab = await chrome.tabs.get(tabId);
+          const tab = await api.tabs.get(tabId);
           tabs.push({ id: tab.id, title: tab.title || "(untitled)", favIconUrl: tab.favIconUrl });
         } catch {
           // tab no longer exists; skip it
@@ -296,4 +299,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true; // keep the message channel open for the async sendResponse
 });
 
-console.log("Recent Tabs: service worker loaded");
+console.log("Recent Tabs: background script loaded");
