@@ -1,16 +1,29 @@
 {
   "manifest_version": 3,
   "name": "Recent Tabs",
-  "version": "1.1.0",
-  "description": "Cycle back through recently used tabs in each Chrome window.",
+  "version": "1.2.0",
+  "description": "Cycle back through recently used tabs in each browser window.",
   "permissions": ["tabs", "storage"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "recent-tabs@nacnudmit",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
+    }
+  },
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
   },
   "action": {
     "default_popup": "popup.html",
@@ -21,6 +34,9 @@
     }
   },
   "options_page": "options.html",
+  "options_ui": {
+    "page": "options.html"
+  },
   "commands": {
     "cycle-recent-tabs": {
       "suggested_key": {

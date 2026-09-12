@@ -4,7 +4,7 @@ Manual steps to perform in the Chrome Web Store Developer Dashboard (https://chr
 
 1. If you haven't already, register as a Chrome Web Store developer (one-time $5 USD fee). Also verify a contact email in your developer account settings — Google requires this before an item can be published.
 2. Host `privacy-policy.html` somewhere with a public URL (GitHub Pages, a Gist's raw view, Google Sites, etc.) and note the URL.
-3. Build the submission package: run `./package.sh` from the repo root to produce `recent-tabs.zip`.
+3. Build the submission package: run `./package.sh` from the repo root to produce `recent-tabs.zip` (Chrome-only manifest). For addons.mozilla.org, run `./package.sh firefox` to produce `recent-tabs-firefox.zip`. See the README for how the two packages differ.
 4. In the dashboard, click "New Item" and upload `recent-tabs.zip`.
 5. Fill in the "Store Listing" tab using the copy from `docs/store-listing.md`:
    - Summary
